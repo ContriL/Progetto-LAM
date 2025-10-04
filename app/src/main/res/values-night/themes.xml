@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema base per la modalità notte -->
+    <style name="Theme.TravelCompanion" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Colori primari in versione più scura -->
+        <item name="colorPrimary">#FFBB86FC</item>
+        <item name="colorPrimaryVariant">#3700B3</item>
+        <item name="colorOnPrimary">@android:color/black</item>
+
+        <!-- Colori secondari -->
+        <item name="colorSecondary">#03DAC5</item>
+        <item name="colorSecondaryVariant">#018786</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+
+        <!-- Colore della status bar -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+
+        <!-- ✅ Disattiva la ActionBar del sistema -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+
+        <!-- Sfondo scuro per la modalità notte -->
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

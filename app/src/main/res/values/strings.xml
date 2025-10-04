@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Travel Companion</string>
+
+    <!-- Navigation -->
+    <string name="home">Home</string>
+    <string name="trips">Trips</string>
+    <string name="statistics">Statistics</string>
+    <string name="profile">Profile</string>
+
+    <!-- Home screen -->
+    <string name="start_trip">Start Trip</string>
+    <string name="welcome_message">Welcome!</string>
+    <string name="active_trip">Active Trip</string>
+    <string name="no_active_trip">No Active Trip</string>
+    <string name="quick_stats">Quick Stats</string>
+    <string name="total_trips">Total Trips</string>
+    <string name="distance">Distance</string>
+    <string name="this_month">This Month</string>
+    <string name="recent_trips">Recent Trips</string>
+
+    <!-- Actions -->
+    <string name="action_start_trip">Start new trip</string>
+
+    <!-- Messages -->
+    <string name="error_loading_screen">Error loading screen</string>
+    <string name="permissions_denied">Some permissions were denied. App functionality may be limited.</string>
+    <string name="coming_soon">Coming soon</string>
+</resources>
