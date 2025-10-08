@@ -24,6 +24,12 @@ class MainActivity : AppCompatActivity() {
     private var fragmentContainer: FrameLayout? = null
     private var currentFragmentTag: String = "HOME"
 
+    // ✅ ID corretti per i menu item (evita Expected resource of type id)
+    private val ID_HOME = ViewCompat.generateViewId()
+    private val ID_TRIPS = ViewCompat.generateViewId()
+    private val ID_STATS = ViewCompat.generateViewId()
+    private val ID_PROFILE = ViewCompat.generateViewId()
+
     companion object {
         private const val TAG = "MainActivity"
         private const val PERMISSION_REQUEST_CODE = 1001
@@ -70,13 +76,13 @@ class MainActivity : AppCompatActivity() {
             if (savedInstanceState == null) {
                 Log.d(TAG, "Loading initial fragment")
                 loadFragment(HomeFragment(), TAG_HOME)
-                bottomNav?.selectedItemId = 1
+                bottomNav?.selectedItemId = ID_HOME   // ✅ uso dell'ID corretto
             } else {
                 currentFragmentTag = savedInstanceState.getString("CURRENT_FRAGMENT", TAG_HOME)
                 Log.d(TAG, "Restored fragment tag: $currentFragmentTag")
             }
 
-            // Richiedi permessi (in background per non bloccare l'UI)
+            // Richiedi permessi
             checkAndRequestPermissions()
 
             Log.d(TAG, "onCreate completed successfully")
@@ -106,14 +112,21 @@ class MainActivity : AppCompatActivity() {
 
         // Toolbar
         val toolbar = Toolbar(context).apply {
+            val toolbarHeight = getActionBarHeight()
             layoutParams = CoordinatorLayout.LayoutParams(
                 CoordinatorLayout.LayoutParams.MATCH_PARENT,
-                getActionBarHeight()
+                toolbarHeight
             )
             title = "Travel Companion"
             setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_blue_dark))
+            elevation = dpToPx(4).toFloat()
         }
-        setSupportActionBar(toolbar)
+
+        try {
+            setSupportActionBar(toolbar)
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "Error setting support action bar", e)
+        }
 
         // Fragment Container
         fragmentContainer = FrameLayout(context).apply {
@@ -137,11 +150,11 @@ class MainActivity : AppCompatActivity() {
                 gravity = android.view.Gravity.BOTTOM
             }
 
-            // Crea menu programmaticamente
-            menu.add(0, 1, 0, "Home").setIcon(android.R.drawable.ic_menu_compass)
-            menu.add(0, 2, 0, "Trips").setIcon(android.R.drawable.ic_menu_mapmode)
-            menu.add(0, 3, 0, "Stats").setIcon(android.R.drawable.ic_menu_sort_by_size)
-            menu.add(0, 4, 0, "Profile").setIcon(android.R.drawable.ic_menu_myplaces)
+            // ✅ Crea menu con ID validi
+            menu.add(0, ID_HOME, 0, "Home").setIcon(android.R.drawable.ic_menu_compass)
+            menu.add(0, ID_TRIPS, 0, "Trips").setIcon(android.R.drawable.ic_menu_mapmode)
+            menu.add(0, ID_STATS, 0, "Stats").setIcon(android.R.drawable.ic_menu_sort_by_size)
+            menu.add(0, ID_PROFILE, 0, "Profile").setIcon(android.R.drawable.ic_menu_myplaces)
         }
 
         // FAB
@@ -170,22 +183,22 @@ class MainActivity : AppCompatActivity() {
         bottomNav?.setOnItemSelectedListener { item ->
             try {
                 when (item.itemId) {
-                    1 -> {
+                    ID_HOME -> {
                         loadFragment(HomeFragment(), TAG_HOME)
                         updateToolbarTitle("Home")
                         true
                     }
-                    2 -> {
+                    ID_TRIPS -> {
                         loadFragment(TripsFragment(), TAG_TRIPS)
                         updateToolbarTitle("My Trips")
                         true
                     }
-                    3 -> {
+                    ID_STATS -> {
                         loadFragment(StatsFragment(), TAG_STATS)
                         updateToolbarTitle("Statistics")
                         true
                     }
-                    4 -> {
+                    ID_PROFILE -> {
                         loadFragment(ProfileFragment(), TAG_PROFILE)
                         updateToolbarTitle("Profile")
                         true
@@ -202,7 +215,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupFab() {
         fabStartTrip?.setOnClickListener {
-            Toast.makeText(this, "Create new trip - Coming soon", Toast.LENGTH_SHORT).show()
+            val dialog = com.example.travel_companion.ui.dialog.CreateTripDialog()
+            dialog.show(supportFragmentManager, "CreateTripDialog")
         }
     }
 
@@ -280,19 +294,18 @@ class MainActivity : AppCompatActivity() {
             val styledAttributes = theme.obtainStyledAttributes(intArrayOf(android.R.attr.actionBarSize))
             val height = styledAttributes.getDimension(0, 0f).toInt()
             styledAttributes.recycle()
-            if (height > 0) height else dpToPx(56) // Fallback
+            if (height > 0) height else dpToPx(56)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting action bar height", e)
-            dpToPx(56) // Default height
+            dpToPx(56)
         }
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        // Gestione back button: torna alla home se non ci sei già
         if (currentFragmentTag != TAG_HOME) {
             loadFragment(HomeFragment(), TAG_HOME)
-            bottomNav?.selectedItemId = 1
+            bottomNav?.selectedItemId = ID_HOME    // ✅ uso corretto dell'ID
             updateToolbarTitle("Home")
         } else {
             super.onBackPressed()

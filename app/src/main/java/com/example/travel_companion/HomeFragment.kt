@@ -7,19 +7,31 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.travel_companion.viewmodel.TripViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 class HomeFragment : Fragment() {
 
     private var txtWelcome: TextView? = null
     private var txtActiveTrip: TextView? = null
+    private var btnStopTrip: Button? = null
     private var recyclerRecentTrips: RecyclerView? = null
+    private var statsCard1: TextView? = null
+    private var statsCard2: TextView? = null
+    private var statsCard3: TextView? = null
+
+    private val viewModel: TripViewModel by activityViewModels()
+    private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,12 +41,10 @@ class HomeFragment : Fragment() {
         return try {
             val view = createLayout()
             setupUI()
-            loadActiveTrip()
-            loadRecentTrips()
+            observeData()
             view
         } catch (e: Exception) {
             e.printStackTrace()
-            // Fallback view in caso di errore
             TextView(requireContext()).apply {
                 text = "Error loading home screen"
                 gravity = Gravity.CENTER
@@ -47,7 +57,11 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         txtWelcome = null
         txtActiveTrip = null
+        btnStopTrip = null
         recyclerRecentTrips = null
+        statsCard1 = null
+        statsCard2 = null
+        statsCard3 = null
     }
 
     private fun createLayout(): ScrollView {
@@ -177,13 +191,30 @@ class HomeFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            ).apply {
+                bottomMargin = dpToPx(12)
+            }
             textSize = 14f
             setTextColor(Color.GRAY)
         }
 
+        btnStopTrip = Button(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            text = "Stop Trip"
+            visibility = View.GONE
+            setOnClickListener {
+                viewModel.activeTrip.value?.let { trip ->
+                    viewModel.stopTrip(trip.id)
+                }
+            }
+        }
+
         cardContent.addView(title)
         txtActiveTrip?.let { cardContent.addView(it) }
+        btnStopTrip?.let { cardContent.addView(it) }
         card.addView(cardContent)
 
         return card
@@ -240,6 +271,13 @@ class HomeFragment : Fragment() {
             textSize = 24f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.parseColor("#FF6200EE"))
+
+            // Store reference for updates
+            when (label) {
+                "Total Trips" -> statsCard1 = this
+                "Distance" -> statsCard2 = this
+                "This Month" -> statsCard3 = this
+            }
         }
 
         val labelText = TextView(context).apply {
@@ -261,16 +299,55 @@ class HomeFragment : Fragment() {
         // Setup RecyclerView
         recyclerRecentTrips?.apply {
             layoutManager = LinearLayoutManager(requireContext())
-            // TODO: Impostare adapter quando disponibile
         }
     }
 
-    private fun loadActiveTrip() {
-        txtActiveTrip?.text = "No active trip. Start a new adventure!"
-    }
+    private fun observeData() {
+        // Observe active trip
+        viewModel.activeTrip.observe(viewLifecycleOwner) { trip ->
+            if (trip != null && trip.isActive) {
+                txtActiveTrip?.text = """
+                    📍 ${trip.destination}
+                    🗓️ Started: ${dateFormat.format(trip.startDate)}
+                    🚗 Type: ${trip.tripType.getDisplayName()}
+                    ${trip.description?.let { "\n📝 $it" } ?: ""}
+                """.trimIndent()
+                btnStopTrip?.visibility = View.VISIBLE
+            } else {
+                txtActiveTrip?.text = "No active trip. Start a new adventure!"
+                btnStopTrip?.visibility = View.GONE
+            }
+        }
 
-    private fun loadRecentTrips() {
-        // TODO: Caricare gli ultimi viaggi dal database
+        // Observe trip count
+        viewModel.tripCount.observe(viewLifecycleOwner) { count ->
+            statsCard1?.text = count?.toString() ?: "0"
+        }
+
+        // Observe total distance
+        viewModel.totalDistance.observe(viewLifecycleOwner) { distance ->
+            val distanceStr = if (distance != null && distance > 0) {
+                String.format("%.1f km", distance)
+            } else {
+                "0 km"
+            }
+            statsCard2?.text = distanceStr
+        }
+
+        // Observe trips this month
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        val startOfMonth = calendar.time
+
+        calendar.add(Calendar.MONTH, 1)
+        val endOfMonth = calendar.time
+
+        viewModel.getTripsInDateRange(startOfMonth, endOfMonth).observe(viewLifecycleOwner) { trips ->
+            statsCard3?.text = trips?.size?.toString() ?: "0"
+        }
     }
 
     private fun dpToPx(dp: Int): Int {
