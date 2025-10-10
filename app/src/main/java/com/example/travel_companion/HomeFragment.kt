@@ -1,5 +1,6 @@
 package com.example.travel_companion
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -16,6 +17,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.travel_companion.ui.activity.ActiveTripActivity
 import com.example.travel_companion.viewmodel.TripViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -203,11 +205,13 @@ class HomeFragment : Fragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            text = "Stop Trip"
+            text = "View Details"
             visibility = View.GONE
             setOnClickListener {
                 viewModel.activeTrip.value?.let { trip ->
-                    viewModel.stopTrip(trip.id)
+                    val intent = Intent(requireContext(), ActiveTripActivity::class.java)
+                    intent.putExtra(ActiveTripActivity.EXTRA_TRIP_ID, trip.id)
+                    startActivity(intent)
                 }
             }
         }

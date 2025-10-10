@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- External storage for photos -->
+    <external-files-path
+        name="trip_photos"
+        path="Pictures/TripPhotos/" />
+
+    <!-- Cache directory for temporary files -->
+    <external-cache-path
+        name="trip_cache"
+        path="." />
+
+    <!-- Internal files -->
+    <files-path
+        name="internal_files"
+        path="." />
+</paths>

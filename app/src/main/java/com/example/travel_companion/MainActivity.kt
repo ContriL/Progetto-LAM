@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -14,6 +15,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
+import com.example.travel_companion.util.PermissionHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
@@ -24,34 +26,18 @@ class MainActivity : AppCompatActivity() {
     private var fragmentContainer: FrameLayout? = null
     private var currentFragmentTag: String = "HOME"
 
-    // ✅ ID corretti per i menu item (evita Expected resource of type id)
-    private val ID_HOME = ViewCompat.generateViewId()
-    private val ID_TRIPS = ViewCompat.generateViewId()
-    private val ID_STATS = ViewCompat.generateViewId()
-    private val ID_PROFILE = ViewCompat.generateViewId()
-
     companion object {
         private const val TAG = "MainActivity"
-        private const val PERMISSION_REQUEST_CODE = 1001
         private const val TAG_HOME = "HOME"
         private const val TAG_TRIPS = "TRIPS"
         private const val TAG_STATS = "STATS"
         private const val TAG_PROFILE = "PROFILE"
 
-        private val REQUIRED_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.CAMERA,
-                Manifest.permission.POST_NOTIFICATIONS
-            )
-        } else {
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.CAMERA
-            )
-        }
+        // Generiamo ID validi per gli item del menu
+        private val MENU_HOME_ID = ViewCompat.generateViewId()
+        private val MENU_TRIPS_ID = ViewCompat.generateViewId()
+        private val MENU_STATS_ID = ViewCompat.generateViewId()
+        private val MENU_PROFILE_ID = ViewCompat.generateViewId()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,13 +62,13 @@ class MainActivity : AppCompatActivity() {
             if (savedInstanceState == null) {
                 Log.d(TAG, "Loading initial fragment")
                 loadFragment(HomeFragment(), TAG_HOME)
-                bottomNav?.selectedItemId = ID_HOME   // ✅ uso dell'ID corretto
+                bottomNav?.selectedItemId = MENU_HOME_ID
             } else {
                 currentFragmentTag = savedInstanceState.getString("CURRENT_FRAGMENT", TAG_HOME)
                 Log.d(TAG, "Restored fragment tag: $currentFragmentTag")
             }
 
-            // Richiedi permessi
+            // Richiedi permessi essenziali
             checkAndRequestPermissions()
 
             Log.d(TAG, "onCreate completed successfully")
@@ -126,6 +112,7 @@ class MainActivity : AppCompatActivity() {
             setSupportActionBar(toolbar)
         } catch (e: IllegalStateException) {
             Log.e(TAG, "Error setting support action bar", e)
+            // Il tema probabilmente ha già un ActionBar, continuiamo senza
         }
 
         // Fragment Container
@@ -150,11 +137,11 @@ class MainActivity : AppCompatActivity() {
                 gravity = android.view.Gravity.BOTTOM
             }
 
-            // ✅ Crea menu con ID validi
-            menu.add(0, ID_HOME, 0, "Home").setIcon(android.R.drawable.ic_menu_compass)
-            menu.add(0, ID_TRIPS, 0, "Trips").setIcon(android.R.drawable.ic_menu_mapmode)
-            menu.add(0, ID_STATS, 0, "Stats").setIcon(android.R.drawable.ic_menu_sort_by_size)
-            menu.add(0, ID_PROFILE, 0, "Profile").setIcon(android.R.drawable.ic_menu_myplaces)
+            // Crea menu programmaticamente con ID validi
+            menu.add(0, MENU_HOME_ID, 0, "Home").setIcon(android.R.drawable.ic_menu_compass)
+            menu.add(0, MENU_TRIPS_ID, 1, "Trips").setIcon(android.R.drawable.ic_menu_mapmode)
+            menu.add(0, MENU_STATS_ID, 2, "Stats").setIcon(android.R.drawable.ic_menu_sort_by_size)
+            menu.add(0, MENU_PROFILE_ID, 3, "Profile").setIcon(android.R.drawable.ic_menu_myplaces)
         }
 
         // FAB
@@ -183,22 +170,22 @@ class MainActivity : AppCompatActivity() {
         bottomNav?.setOnItemSelectedListener { item ->
             try {
                 when (item.itemId) {
-                    ID_HOME -> {
+                    MENU_HOME_ID -> {
                         loadFragment(HomeFragment(), TAG_HOME)
                         updateToolbarTitle("Home")
                         true
                     }
-                    ID_TRIPS -> {
+                    MENU_TRIPS_ID -> {
                         loadFragment(TripsFragment(), TAG_TRIPS)
                         updateToolbarTitle("My Trips")
                         true
                     }
-                    ID_STATS -> {
+                    MENU_STATS_ID -> {
                         loadFragment(StatsFragment(), TAG_STATS)
                         updateToolbarTitle("Statistics")
                         true
                     }
-                    ID_PROFILE -> {
+                    MENU_PROFILE_ID -> {
                         loadFragment(ProfileFragment(), TAG_PROFILE)
                         updateToolbarTitle("Profile")
                         true
@@ -215,6 +202,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupFab() {
         fabStartTrip?.setOnClickListener {
+            // Apri il dialog per creare un nuovo viaggio
             val dialog = com.example.travel_companion.ui.dialog.CreateTripDialog()
             dialog.show(supportFragmentManager, "CreateTripDialog")
         }
@@ -245,20 +233,49 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAndRequestPermissions() {
-        try {
-            val permissionsToRequest = REQUIRED_PERMISSIONS.filter {
-                ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-            }
+        if (!PermissionHelper.hasLocationPermission(this) ||
+            !PermissionHelper.hasCameraPermission(this) ||
+            !PermissionHelper.hasNotificationPermission(this)) {
 
-            if (permissionsToRequest.isNotEmpty()) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    permissionsToRequest.toTypedArray(),
-                    PERMISSION_REQUEST_CODE
-                )
+            if (PermissionHelper.shouldShowLocationRationale(this)) {
+                showPermissionRationale()
+            } else {
+                PermissionHelper.requestEssentialPermissions(this)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking permissions", e)
+        } else {
+            // Check for background location if foreground is granted
+            if (!PermissionHelper.hasBackgroundLocationPermission(this)) {
+                requestBackgroundLocationLater()
+            }
+        }
+    }
+
+    private fun showPermissionRationale() {
+        AlertDialog.Builder(this)
+            .setTitle("Permissions Required")
+            .setMessage("Travel Companion needs location and camera permissions to track your trips and capture memories. Background location is needed to track your journey even when the app is closed.")
+            .setPositiveButton("Grant") { _, _ ->
+                PermissionHelper.requestEssentialPermissions(this)
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+                Toast.makeText(this, "Some features will be limited", Toast.LENGTH_LONG).show()
+            }
+            .show()
+    }
+
+    private fun requestBackgroundLocationLater() {
+        // Request background location after a delay to improve UX
+        // This follows Android best practices
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            AlertDialog.Builder(this)
+                .setTitle("Background Location")
+                .setMessage("To track your trips continuously, please allow background location access by selecting 'Allow all the time' in the next screen.")
+                .setPositiveButton("Continue") { _, _ ->
+                    PermissionHelper.requestBackgroundLocationPermission(this)
+                }
+                .setNegativeButton("Later", null)
+                .show()
         }
     }
 
@@ -268,18 +285,37 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val deniedPermissions = permissions.filterIndexed { index, _ ->
-                grantResults.getOrNull(index) != PackageManager.PERMISSION_GRANTED
-            }
 
-            if (deniedPermissions.isNotEmpty()) {
-                Log.w(TAG, "Some permissions denied: $deniedPermissions")
-                Toast.makeText(
-                    this,
-                    "Some permissions were denied. App functionality may be limited.",
-                    Toast.LENGTH_LONG
-                ).show()
+        when (requestCode) {
+            PermissionHelper.LOCATION_PERMISSION_CODE -> {
+                PermissionHelper.handlePermissionResult(
+                    requestCode, permissions, grantResults,
+                    onGranted = {
+                        Toast.makeText(this, "Permissions granted!", Toast.LENGTH_SHORT).show()
+                        // Request background location after foreground is granted
+                        if (!PermissionHelper.hasBackgroundLocationPermission(this)) {
+                            requestBackgroundLocationLater()
+                        }
+                    },
+                    onDenied = {
+                        Toast.makeText(
+                            this,
+                            "Some permissions denied. Trip tracking may be limited.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            }
+            PermissionHelper.BACKGROUND_LOCATION_PERMISSION_CODE -> {
+                if (PermissionHelper.hasBackgroundLocationPermission(this)) {
+                    Toast.makeText(this, "Background tracking enabled!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Background tracking limited. App must be open to track trips.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }
@@ -294,18 +330,19 @@ class MainActivity : AppCompatActivity() {
             val styledAttributes = theme.obtainStyledAttributes(intArrayOf(android.R.attr.actionBarSize))
             val height = styledAttributes.getDimension(0, 0f).toInt()
             styledAttributes.recycle()
-            if (height > 0) height else dpToPx(56)
+            if (height > 0) height else dpToPx(56) // Fallback
         } catch (e: Exception) {
             Log.e(TAG, "Error getting action bar height", e)
-            dpToPx(56)
+            dpToPx(56) // Default height
         }
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        // Gestione back button: torna alla home se non ci sei già
         if (currentFragmentTag != TAG_HOME) {
             loadFragment(HomeFragment(), TAG_HOME)
-            bottomNav?.selectedItemId = ID_HOME    // ✅ uso corretto dell'ID
+            bottomNav?.selectedItemId = MENU_HOME_ID
             updateToolbarTitle("Home")
         } else {
             super.onBackPressed()
