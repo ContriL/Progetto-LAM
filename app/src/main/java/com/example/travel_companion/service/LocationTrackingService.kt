@@ -45,6 +45,12 @@ class LocationTrackingService : Service() {
         super.onCreate()
         Log.d(TAG, "Service created")
 
+        // Check Google Play Services
+        if (!com.example.travel_companion.util.PlayServicesHelper.isPlayServicesAvailable(applicationContext)) {
+            Log.e(TAG, "Google Play Services not available. GPS tracking may not work properly.")
+            // Continue anyway - the app can still function without live tracking
+        }
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         val tripDao = AppDatabase.getDatabase(applicationContext).tripDao()

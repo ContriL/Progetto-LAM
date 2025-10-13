@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
@@ -25,6 +26,9 @@ class CreateTripDialog : DialogFragment() {
     private var endDate: Date? = null
     private var selectedTripType: TripType = TripType.LOCAL
     private var selectedCategory: TripCategory? = null
+
+    private var endDateButton: Button? = null
+    private var typeDescription: TextView? = null
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val context = requireContext()
@@ -82,7 +86,7 @@ class CreateTripDialog : DialogFragment() {
         mainLayout.addView(tripTypeLabel)
 
         // Type description (will be updated dynamically)
-        val typeDescription = TextView(context).apply {
+        typeDescription = TextView(context).apply {
             text = selectedTripType.getDescription()
             textSize = 12f
             setTextColor(Color.GRAY)
@@ -111,7 +115,26 @@ class CreateTripDialog : DialogFragment() {
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
                     selectedTripType = TripType.values()[position]
-                    typeDescription.text = selectedTripType.getDescription()
+                    typeDescription?.text = selectedTripType.getDescription()
+
+                    // Handle DAY_TRIP special case
+                    if (selectedTripType == TripType.DAY_TRIP) {
+                        // Set end date equal to start date
+                        endDate = startDate
+                        endDateButton?.text = dateFormat.format(startDate)
+                        endDateButton?.isEnabled = false
+                        endDateButton?.alpha = 0.5f
+
+                        Toast.makeText(
+                            context,
+                            "Day Trip: End date automatically set to start date",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        // Re-enable end date selection for other types
+                        endDateButton?.isEnabled = true
+                        endDateButton?.alpha = 1.0f
+                    }
 
                     // Show recommended duration
                     val (minDays, maxDays) = selectedTripType.getRecommendedDuration()
@@ -169,19 +192,39 @@ class CreateTripDialog : DialogFragment() {
             }
 
             setOnClickListener {
-                showDatePicker { date ->
+                showDatePicker(startDate) { date ->
                     startDate = date
                     text = dateFormat.format(date)
+
+                    // If DAY_TRIP, automatically update end date
+                    if (selectedTripType == TripType.DAY_TRIP) {
+                        endDate = date
+                        endDateButton?.text = dateFormat.format(date)
+                    }
+
+                    // Validate end date if already set
+                    endDate?.let { end ->
+                        if (end.before(date)) {
+                            // Reset end date if it's now before start date
+                            endDate = null
+                            endDateButton?.text = "Not set"
+                            Toast.makeText(
+                                context,
+                                "End date reset: was before new start date",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
                 }
             }
         }
         mainLayout.addView(startDateButton)
 
-        // End date (optional for multi-day trips)
+        // End date (optional for multi-day trips, automatic for day trips)
         val endDateLabel = createLabel("End Date (Optional)")
         mainLayout.addView(endDateLabel)
 
-        val endDateButton = Button(context).apply {
+        endDateButton = Button(context).apply {
             text = "Not set"
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -191,12 +234,28 @@ class CreateTripDialog : DialogFragment() {
             }
 
             setOnClickListener {
-                showDatePicker { date ->
-                    if (date.after(startDate)) {
+                // Don't allow selection for DAY_TRIP
+                if (selectedTripType == TripType.DAY_TRIP) {
+                    Toast.makeText(
+                        context,
+                        "Day Trip: End date is automatically set to start date",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@setOnClickListener
+                }
+
+                showDatePicker(endDate ?: startDate) { date ->
+                    if (date.before(startDate)) {
+                        // Show error dialog
+                        AlertDialog.Builder(context)
+                            .setTitle("Invalid Date")
+                            .setMessage("End date cannot be before start date!\n\nPlease select a date equal to or after ${dateFormat.format(startDate)}")
+                            .setPositiveButton("OK", null)
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show()
+                    } else {
                         endDate = date
                         text = dateFormat.format(date)
-                    } else {
-                        Toast.makeText(context, "End date must be after start date", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -250,6 +309,19 @@ class CreateTripDialog : DialogFragment() {
                     return@setPositiveButton
                 }
 
+                // Final validation for end date
+                endDate?.let { end ->
+                    if (end.before(startDate)) {
+                        AlertDialog.Builder(context)
+                            .setTitle("Invalid Date")
+                            .setMessage("Data di fine viaggio non corretta!\n\nEnd date cannot be before start date.")
+                            .setPositiveButton("OK", null)
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show()
+                        return@setPositiveButton
+                    }
+                }
+
                 val description = descriptionInput.text.toString().trim().ifEmpty { null }
                 val budget = budgetInput.text.toString().toDoubleOrNull()
 
@@ -283,13 +355,15 @@ class CreateTripDialog : DialogFragment() {
         }
     }
 
-    private fun showDatePicker(onDateSelected: (Date) -> Unit) {
+    private fun showDatePicker(initialDate: Date, onDateSelected: (Date) -> Unit) {
         val calendar = Calendar.getInstance()
+        calendar.time = initialDate
 
         DatePickerDialog(
             requireContext(),
             { _, year, month, dayOfMonth ->
-                calendar.set(year, month, dayOfMonth)
+                calendar.set(year, month, dayOfMonth, 0, 0, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
                 onDateSelected(calendar.time)
             },
             calendar.get(Calendar.YEAR),

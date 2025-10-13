@@ -5,7 +5,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,11 +39,9 @@ class ActiveTripActivity : AppCompatActivity() {
     private var currentLongitude: Double? = null
 
     private var txtDestination: TextView? = null
-    // variabili che rappresentano la riga (LinearLayout) che contiene il TextView del valore
-    private var txtDistance: LinearLayout? = null
-    private var txtDuration: LinearLayout? = null
-    private var txtLocations: LinearLayout? = null
-
+    private var txtDistanceValue: TextView? = null
+    private var txtDurationValue: TextView? = null
+    private var txtLocationsValue: TextView? = null
     private var btnStopTrip: Button? = null
     private var btnAddPhoto: Button? = null
     private var btnAddNote: Button? = null
@@ -65,6 +66,15 @@ class ActiveTripActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Check Google Play Services
+        if (!com.example.travel_companion.util.PlayServicesHelper.checkPlayServices(this)) {
+            Toast.makeText(
+                this,
+                "Google Play Services not available. GPS tracking may be limited.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
 
         viewModel = ViewModelProvider(this)[TripViewModel::class.java]
         photoManager = PhotoManager(this)
@@ -138,9 +148,8 @@ class ActiveTripActivity : AppCompatActivity() {
             ).apply {
                 bottomMargin = dpToPx(16)
             }
-            // usa i setter per compatibilità
             radius = dpToPx(12).toFloat()
-            setCardElevation(dpToPx(4).toFloat())
+            cardElevation = dpToPx(4).toFloat()
         }
 
         val content = LinearLayout(this).apply {
@@ -186,7 +195,7 @@ class ActiveTripActivity : AppCompatActivity() {
                 bottomMargin = dpToPx(16)
             }
             radius = dpToPx(12).toFloat()
-            setCardElevation(dpToPx(4).toFloat())
+            cardElevation = dpToPx(4).toFloat()
         }
 
         val content = LinearLayout(this).apply {
@@ -212,13 +221,17 @@ class ActiveTripActivity : AppCompatActivity() {
         }
         content.addView(statsTitle)
 
-        txtDistance = createStatRow("📏 Distance:", "0.0 km")
-        txtDuration = createStatRow("⏱️ Duration:", "00:00:00")
-        txtLocations = createStatRow("📍 Locations:", "0")
+        val distanceRow = createStatRow("📏 Distance:", "0.0 km")
+        val durationRow = createStatRow("⏱️ Duration:", "00:00:00")
+        val locationsRow = createStatRow("📍 Locations:", "0")
 
-        txtDistance?.let { content.addView(it) }
-        txtDuration?.let { content.addView(it) }
-        txtLocations?.let { content.addView(it) }
+        txtDistanceValue = distanceRow.getChildAt(1) as TextView
+        txtDurationValue = durationRow.getChildAt(1) as TextView
+        txtLocationsValue = locationsRow.getChildAt(1) as TextView
+
+        content.addView(distanceRow)
+        content.addView(durationRow)
+        content.addView(locationsRow)
 
         card.addView(content)
         return card
@@ -255,7 +268,6 @@ class ActiveTripActivity : AppCompatActivity() {
 
         row.addView(labelText)
         row.addView(valueText)
-        row.tag = valueText // Store reference for updates
 
         return row
     }
@@ -269,7 +281,7 @@ class ActiveTripActivity : AppCompatActivity() {
                 bottomMargin = dpToPx(16)
             }
             radius = dpToPx(12).toFloat()
-            setCardElevation(dpToPx(4).toFloat())
+            cardElevation = dpToPx(4).toFloat()
         }
 
         val content = LinearLayout(this).apply {
@@ -332,7 +344,7 @@ class ActiveTripActivity : AppCompatActivity() {
         }
 
         viewModel.getLocationsByTrip(tripId).observe(this) { locations ->
-            (txtLocations?.tag as? TextView)?.text = "${locations.size}"
+            txtLocationsValue?.text = "${locations.size}"
 
             // Calculate distance
             if (locations.size >= 2) {
@@ -345,7 +357,7 @@ class ActiveTripActivity : AppCompatActivity() {
                         loc2.latitude, loc2.longitude
                     )
                 }
-                (txtDistance?.tag as? TextView)?.text = String.format("%.2f km", distance)
+                txtDistanceValue?.text = String.format("%.2f km", distance)
             }
         }
     }
@@ -356,7 +368,7 @@ class ActiveTripActivity : AppCompatActivity() {
         val minutes = (duration / (1000 * 60)) % 60
         val seconds = (duration / 1000) % 60
 
-        (txtDuration?.tag as? TextView)?.text = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+        txtDurationValue?.text = String.format("%02d:%02d:%02d", hours, minutes, seconds)
     }
 
     private fun startLocationTracking(tripId: Long) {
@@ -492,9 +504,9 @@ class ActiveTripActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         txtDestination = null
-        txtDistance = null
-        txtDuration = null
-        txtLocations = null
+        txtDistanceValue = null
+        txtDurationValue = null
+        txtLocationsValue = null
         btnStopTrip = null
         btnAddPhoto = null
         btnAddNote = null
