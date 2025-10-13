@@ -1,5 +1,6 @@
 package com.example.travel_companion
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -7,13 +8,21 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import com.example.travel_companion.data.entity.TripType
+import com.example.travel_companion.ui.activity.TripTypeStatsActivity
+import com.example.travel_companion.viewmodel.TripViewModel
 
 class StatsFragment : Fragment() {
+
+    private val viewModel: TripViewModel by activityViewModels()
+    private val typeCountCards = mutableMapOf<TripType, TextView>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -21,6 +30,7 @@ class StatsFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         val view = createLayout()
+        observeData()
         return view
     }
 
@@ -46,36 +56,43 @@ class StatsFragment : Fragment() {
 
         // Title
         val title = TextView(context).apply {
+            text = "Travel Statistics"
+            textSize = 24f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 bottomMargin = dpToPx(24)
             }
-            text = "Travel Statistics"
-            textSize = 24f
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(Color.BLACK)
         }
+        mainLayout.addView(title)
 
         // Overview section
         val overviewTitle = TextView(context).apply {
+            text = "Overview"
+            textSize = 18f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 bottomMargin = dpToPx(12)
             }
-            text = "Overview"
+        }
+        mainLayout.addView(overviewTitle)
+
+        val statsGrid = createStatsGrid()
+        mainLayout.addView(statsGrid)
+
+        // Trip Types section
+        val typesTitle = TextView(context).apply {
+            text = "Trip Types Distribution"
             textSize = 18f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.BLACK)
-        }
-
-        val statsGrid = createStatsGrid()
-
-        // Charts placeholder
-        val chartsTitle = TextView(context).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -83,19 +100,45 @@ class StatsFragment : Fragment() {
                 topMargin = dpToPx(24)
                 bottomMargin = dpToPx(12)
             }
+        }
+        mainLayout.addView(typesTitle)
+
+        val tripTypesContainer = createTripTypesContainer()
+        mainLayout.addView(tripTypesContainer)
+
+        // Button to view detailed stats
+        val btnDetailedStats = Button(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(16)
+                bottomMargin = dpToPx(16)
+            }
+            text = "View Detailed Statistics"
+            setOnClickListener {
+                val intent = Intent(requireContext(), TripTypeStatsActivity::class.java)
+                startActivity(intent)
+            }
+        }
+        mainLayout.addView(btnDetailedStats)
+
+        // Charts placeholder
+        val chartsTitle = TextView(context).apply {
             text = "Charts & Visualizations"
             textSize = 18f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.BLACK)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(12)
+            }
         }
+        mainLayout.addView(chartsTitle)
 
         val chartPlaceholder = createChartPlaceholder()
-
-        // Add all views
-        mainLayout.addView(title)
-        mainLayout.addView(overviewTitle)
-        mainLayout.addView(statsGrid)
-        mainLayout.addView(chartsTitle)
         mainLayout.addView(chartPlaceholder)
 
         scrollView.addView(mainLayout)
@@ -212,6 +255,90 @@ class StatsFragment : Fragment() {
         return card
     }
 
+    private fun createTripTypesContainer(): LinearLayout {
+        val context = requireContext()
+
+        val container = LinearLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.VERTICAL
+        }
+
+        // Create mini card for each mandatory type
+        val mandatoryTypes = listOf(TripType.LOCAL, TripType.DAY_TRIP, TripType.MULTI_DAY)
+
+        mandatoryTypes.forEach { type ->
+            container.addView(createTripTypeMiniCard(type))
+        }
+
+        return container
+    }
+
+    private fun createTripTypeMiniCard(type: TripType): CardView {
+        val context = requireContext()
+
+        val card = CardView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(8)
+            }
+            radius = dpToPx(8).toFloat()
+            cardElevation = dpToPx(2).toFloat()
+        }
+
+        val content = LinearLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12))
+        }
+
+        val icon = TextView(context).apply {
+            text = type.getIcon()
+            textSize = 24f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                rightMargin = dpToPx(12)
+            }
+        }
+
+        val nameText = TextView(context).apply {
+            text = type.getDisplayName()
+            textSize = 14f
+            setTextColor(Color.BLACK)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val countText = TextView(context).apply {
+            text = "0"
+            textSize = 20f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.parseColor("#FF6200EE"))
+        }
+
+        typeCountCards[type] = countText
+
+        content.addView(icon)
+        content.addView(nameText)
+        content.addView(countText)
+        card.addView(content)
+
+        return card
+    }
+
     private fun createChartPlaceholder(): CardView {
         val context = requireContext()
 
@@ -272,6 +399,15 @@ class StatsFragment : Fragment() {
         card.addView(content)
 
         return card
+    }
+
+    private fun observeData() {
+        // Observe counts for each trip type
+        TripType.values().take(3).forEach { type ->
+            viewModel.getTripCountByType(type).observe(viewLifecycleOwner) { count ->
+                typeCountCards[type]?.text = count?.toString() ?: "0"
+            }
+        }
     }
 
     private fun dpToPx(dp: Int): Int {

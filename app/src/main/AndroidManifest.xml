@@ -55,6 +55,13 @@
             android:parentActivityName=".MainActivity"
             android:screenOrientation="portrait" />
 
+        <!-- Trip Type Statistics Activity -->
+        <activity
+            android:name=".ui.activity.TripTypeStatsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:label="Trip Statistics" />
+
         <!-- Location Tracking Service -->
         <service
             android:name=".service.LocationTrackingService"

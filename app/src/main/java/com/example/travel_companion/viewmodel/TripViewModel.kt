@@ -21,7 +21,6 @@ class TripViewModel(application: Application) : AndroidViewModel(application) {
     val totalDistance: LiveData<Double?>
     val totalPhotos: LiveData<Int>
 
-    // ✅ Reso nullable per permettere l'assegnazione di null
     private val _operationStatus = MutableLiveData<OperationStatus?>()
     val operationStatus: LiveData<OperationStatus?> = _operationStatus
 
@@ -42,7 +41,10 @@ class TripViewModel(application: Application) : AndroidViewModel(application) {
         startDate: Date,
         endDate: Date?,
         tripType: TripType,
-        description: String? = null
+        description: String? = null,
+        category: TripCategory? = null,
+        budget: Double? = null,
+        rating: Int? = null
     ) {
         viewModelScope.launch {
             try {
@@ -51,7 +53,10 @@ class TripViewModel(application: Application) : AndroidViewModel(application) {
                     startDate = startDate,
                     endDate = endDate,
                     tripType = tripType,
-                    description = description
+                    description = description,
+                    category = category,
+                    budget = budget,
+                    rating = rating
                 )
                 _operationStatus.value = OperationStatus.Success("Trip created successfully", tripId)
             } catch (e: Exception) {
@@ -205,7 +210,27 @@ class TripViewModel(application: Application) : AndroidViewModel(application) {
         return repository.getTripsInDateRange(startDate, endDate)
     }
 
-    // ✅ Ora funziona correttamente
+    // Trip Type Statistics
+    fun getTripCountByType(type: TripType): LiveData<Int> {
+        return repository.getTripCountByType(type)
+    }
+
+    fun getTotalDistanceByType(type: TripType): LiveData<Double?> {
+        return repository.getTotalDistanceByType(type)
+    }
+
+    fun getAverageDistanceByType(type: TripType): LiveData<Double?> {
+        return repository.getAverageDistanceByType(type)
+    }
+
+    fun getTripCountByCategory(category: TripCategory): LiveData<Int> {
+        return repository.getTripCountByCategory(category)
+    }
+
+    fun getAverageRating(): LiveData<Double?> {
+        return repository.getAverageRating()
+    }
+
     fun clearOperationStatus() {
         _operationStatus.value = null
     }

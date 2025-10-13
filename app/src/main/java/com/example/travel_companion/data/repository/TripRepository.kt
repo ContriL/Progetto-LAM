@@ -21,7 +21,10 @@ class TripRepository(private val tripDao: TripDao) {
         startDate: Date,
         endDate: Date?,
         tripType: TripType,
-        description: String? = null
+        description: String? = null,
+        category: TripCategory? = null,
+        budget: Double? = null,
+        rating: Int? = null
     ): Long = withContext(Dispatchers.IO) {
         // Deactivate any existing active trip
         tripDao.deactivateAllTrips()
@@ -32,7 +35,10 @@ class TripRepository(private val tripDao: TripDao) {
             endDate = endDate,
             tripType = tripType,
             isActive = true,
-            description = description
+            description = description,
+            category = category,
+            budget = budget,
+            rating = rating
         )
 
         tripDao.insertTrip(trip)
@@ -162,6 +168,27 @@ class TripRepository(private val tripDao: TripDao) {
 
     fun getNotesByTrip(tripId: Long): LiveData<List<TripNote>> {
         return tripDao.getNotesByTrip(tripId)
+    }
+
+    // Trip Type Statistics
+    fun getTripCountByType(type: TripType): LiveData<Int> {
+        return tripDao.getTripCountByType(type.name)
+    }
+
+    fun getTotalDistanceByType(type: TripType): LiveData<Double?> {
+        return tripDao.getTotalDistanceByType(type.name)
+    }
+
+    fun getAverageDistanceByType(type: TripType): LiveData<Double?> {
+        return tripDao.getAverageDistanceByType(type.name)
+    }
+
+    fun getTripCountByCategory(category: TripCategory): LiveData<Int> {
+        return tripDao.getTripCountByCategory(category.name)
+    }
+
+    fun getAverageRating(): LiveData<Double?> {
+        return tripDao.getAverageRating()
     }
 
     // Utility function to calculate distance

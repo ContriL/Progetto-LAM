@@ -32,12 +32,6 @@ class MainActivity : AppCompatActivity() {
         private const val TAG_TRIPS = "TRIPS"
         private const val TAG_STATS = "STATS"
         private const val TAG_PROFILE = "PROFILE"
-
-        // Generiamo ID validi per gli item del menu
-        private val MENU_HOME_ID = ViewCompat.generateViewId()
-        private val MENU_TRIPS_ID = ViewCompat.generateViewId()
-        private val MENU_STATS_ID = ViewCompat.generateViewId()
-        private val MENU_PROFILE_ID = ViewCompat.generateViewId()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,7 +56,9 @@ class MainActivity : AppCompatActivity() {
             if (savedInstanceState == null) {
                 Log.d(TAG, "Loading initial fragment")
                 loadFragment(HomeFragment(), TAG_HOME)
-                bottomNav?.selectedItemId = MENU_HOME_ID
+                bottomNav?.post {
+                    bottomNav?.selectedItemId = 1
+                }
             } else {
                 currentFragmentTag = savedInstanceState.getString("CURRENT_FRAGMENT", TAG_HOME)
                 Log.d(TAG, "Restored fragment tag: $currentFragmentTag")
@@ -137,11 +133,11 @@ class MainActivity : AppCompatActivity() {
                 gravity = android.view.Gravity.BOTTOM
             }
 
-            // Crea menu programmaticamente con ID validi
-            menu.add(0, MENU_HOME_ID, 0, "Home").setIcon(android.R.drawable.ic_menu_compass)
-            menu.add(0, MENU_TRIPS_ID, 1, "Trips").setIcon(android.R.drawable.ic_menu_mapmode)
-            menu.add(0, MENU_STATS_ID, 2, "Stats").setIcon(android.R.drawable.ic_menu_sort_by_size)
-            menu.add(0, MENU_PROFILE_ID, 3, "Profile").setIcon(android.R.drawable.ic_menu_myplaces)
+            // Crea menu programmaticamente
+            menu.add(0, 1, 0, "Home").setIcon(android.R.drawable.ic_menu_compass)
+            menu.add(0, 2, 0, "Trips").setIcon(android.R.drawable.ic_menu_mapmode)
+            menu.add(0, 3, 0, "Stats").setIcon(android.R.drawable.ic_menu_sort_by_size)
+            menu.add(0, 4, 0, "Profile").setIcon(android.R.drawable.ic_menu_myplaces)
         }
 
         // FAB
@@ -170,22 +166,22 @@ class MainActivity : AppCompatActivity() {
         bottomNav?.setOnItemSelectedListener { item ->
             try {
                 when (item.itemId) {
-                    MENU_HOME_ID -> {
+                    1 -> {
                         loadFragment(HomeFragment(), TAG_HOME)
                         updateToolbarTitle("Home")
                         true
                     }
-                    MENU_TRIPS_ID -> {
+                    2 -> {
                         loadFragment(TripsFragment(), TAG_TRIPS)
                         updateToolbarTitle("My Trips")
                         true
                     }
-                    MENU_STATS_ID -> {
+                    3 -> {
                         loadFragment(StatsFragment(), TAG_STATS)
                         updateToolbarTitle("Statistics")
                         true
                     }
-                    MENU_PROFILE_ID -> {
+                    4 -> {
                         loadFragment(ProfileFragment(), TAG_PROFILE)
                         updateToolbarTitle("Profile")
                         true
@@ -342,7 +338,7 @@ class MainActivity : AppCompatActivity() {
         // Gestione back button: torna alla home se non ci sei già
         if (currentFragmentTag != TAG_HOME) {
             loadFragment(HomeFragment(), TAG_HOME)
-            bottomNav?.selectedItemId = MENU_HOME_ID
+            bottomNav?.selectedItemId = 1
             updateToolbarTitle("Home")
         } else {
             super.onBackPressed()

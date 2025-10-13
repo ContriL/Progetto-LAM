@@ -48,6 +48,27 @@ interface TripDao {
     @Query("SELECT SUM(totalDistance) FROM trips")
     fun getTotalDistance(): LiveData<Double?>
 
+    @Query("SELECT COUNT(*) FROM trips WHERE tripType = :type")
+    fun getTripCountByType(type: String): LiveData<Int>
+
+    @Query("SELECT SUM(totalDistance) FROM trips WHERE tripType = :type")
+    fun getTotalDistanceByType(type: String): LiveData<Double?>
+
+    @Query("SELECT AVG(totalDistance) FROM trips WHERE tripType = :type AND totalDistance > 0")
+    fun getAverageDistanceByType(type: String): LiveData<Double?>
+
+    @Query("SELECT * FROM trips WHERE tripType = :type ORDER BY startDate DESC LIMIT 1")
+    fun getLastTripByType(type: String): LiveData<Trip?>
+
+    @Query("SELECT COUNT(*) FROM trips WHERE category = :category")
+    fun getTripCountByCategory(category: String): LiveData<Int>
+
+    @Query("SELECT AVG(rating) FROM trips WHERE rating IS NOT NULL")
+    fun getAverageRating(): LiveData<Double?>
+
+    @Query("SELECT * FROM trips WHERE rating >= :minRating ORDER BY rating DESC")
+    fun getTripsWithMinRating(minRating: Int): LiveData<List<Trip>>
+
     // Trip Location operations
     @Insert
     suspend fun insertLocation(location: TripLocation): Long
