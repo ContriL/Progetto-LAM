@@ -1,5 +1,6 @@
 package com.example.travel_companion.ui.activity
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.lifecycle.ViewModelProvider
@@ -22,6 +24,12 @@ class TripDetailActivity : AppCompatActivity() {
 
     private lateinit var viewModel: TripViewModel
     private var currentTrip: Trip? = null
+
+    // Riferimenti alle card
+    private var infoCardContent: LinearLayout? = null
+    private var statsCardContent: LinearLayout? = null
+    private var photosCardContent: LinearLayout? = null
+    private var notesCardContent: LinearLayout? = null
 
     private val dateFormat = SimpleDateFormat("dd MMM yyyy 'at' HH:mm", Locale.getDefault())
     private val dateOnlyFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
@@ -83,7 +91,7 @@ class TripDetailActivity : AppCompatActivity() {
         val statsCard = createStatsCard()
         mainLayout.addView(statsCard)
 
-        // Map placeholder
+        // Map card
         val mapCard = createMapCard()
         mainLayout.addView(mapCard)
 
@@ -94,6 +102,24 @@ class TripDetailActivity : AppCompatActivity() {
         // Notes section
         val notesCard = createNotesCard()
         mainLayout.addView(notesCard)
+
+        // Delete button
+        val deleteBtn = Button(this).apply {
+            text = "🗑️ Delete Trip"
+            textSize = 16f
+            setBackgroundColor(Color.parseColor("#FFD32F2F"))
+            setTextColor(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(24)
+            }
+            setOnClickListener {
+                showDeleteConfirmation()
+            }
+        }
+        mainLayout.addView(deleteBtn)
 
         scrollView.addView(mainLayout)
         return scrollView
@@ -111,17 +137,16 @@ class TripDetailActivity : AppCompatActivity() {
             cardElevation = dpToPx(4).toFloat()
         }
 
-        val content = LinearLayout(this).apply {
+        infoCardContent = LinearLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
-            id = android.view.View.generateViewId()
         }
 
-        card.addView(content)
+        card.addView(infoCardContent)
         return card
     }
 
@@ -137,14 +162,13 @@ class TripDetailActivity : AppCompatActivity() {
             cardElevation = dpToPx(4).toFloat()
         }
 
-        val content = LinearLayout(this).apply {
+        statsCardContent = LinearLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
-            id = android.view.View.generateViewId()
         }
 
         val title = TextView(this).apply {
@@ -159,9 +183,9 @@ class TripDetailActivity : AppCompatActivity() {
                 bottomMargin = dpToPx(12)
             }
         }
-        content.addView(title)
+        statsCardContent?.addView(title)
 
-        card.addView(content)
+        card.addView(statsCardContent)
         return card
     }
 
@@ -169,12 +193,19 @@ class TripDetailActivity : AppCompatActivity() {
         val card = CardView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(250)
+                dpToPx(200)
             ).apply {
                 bottomMargin = dpToPx(16)
             }
             radius = dpToPx(12).toFloat()
             cardElevation = dpToPx(4).toFloat()
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                val intent = Intent(this@TripDetailActivity, TripMapActivity::class.java)
+                intent.putExtra(TripMapActivity.EXTRA_TRIP_ID, currentTrip?.id ?: return@setOnClickListener)
+                startActivity(intent)
+            }
         }
 
         val content = LinearLayout(this).apply {
@@ -200,7 +231,7 @@ class TripDetailActivity : AppCompatActivity() {
             ).apply {
                 topMargin = dpToPx(12)
             }
-            text = "Route Map"
+            text = "View Route Map"
             textSize = 16f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.BLACK)
@@ -214,7 +245,7 @@ class TripDetailActivity : AppCompatActivity() {
             ).apply {
                 topMargin = dpToPx(4)
             }
-            text = "Map integration coming in next step"
+            text = "Tap to see your travel route"
             textSize = 12f
             setTextColor(Color.GRAY)
             gravity = Gravity.CENTER
@@ -240,14 +271,23 @@ class TripDetailActivity : AppCompatActivity() {
             cardElevation = dpToPx(4).toFloat()
         }
 
-        val content = LinearLayout(this).apply {
+        photosCardContent = LinearLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
-            id = android.view.View.generateViewId()
+        }
+
+        // Header con pulsante
+        val headerRow = LinearLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
 
         val title = TextView(this).apply {
@@ -255,10 +295,32 @@ class TripDetailActivity : AppCompatActivity() {
             textSize = 18f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.BLACK)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
         }
-        content.addView(title)
 
-        card.addView(content)
+        val viewAllBtn = Button(this).apply {
+            text = "View Gallery"
+            textSize = 12f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setOnClickListener {
+                val intent = Intent(this@TripDetailActivity, PhotoGalleryActivity::class.java)
+                intent.putExtra(PhotoGalleryActivity.EXTRA_TRIP_ID, currentTrip?.id ?: return@setOnClickListener)
+                startActivity(intent)
+            }
+        }
+
+        headerRow.addView(title)
+        headerRow.addView(viewAllBtn)
+        photosCardContent?.addView(headerRow)
+
+        card.addView(photosCardContent)
         return card
     }
 
@@ -272,14 +334,13 @@ class TripDetailActivity : AppCompatActivity() {
             cardElevation = dpToPx(4).toFloat()
         }
 
-        val content = LinearLayout(this).apply {
+        notesCardContent = LinearLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
-            id = android.view.View.generateViewId()
         }
 
         val title = TextView(this).apply {
@@ -288,9 +349,9 @@ class TripDetailActivity : AppCompatActivity() {
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.BLACK)
         }
-        content.addView(title)
+        notesCardContent?.addView(title)
 
-        card.addView(content)
+        card.addView(notesCardContent)
         return card
     }
 
@@ -309,14 +370,47 @@ class TripDetailActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateTripInfo(trip: Trip) {
-        val infoCard = findViewById<CardView>(android.R.id.content).let { root ->
-            (root as ViewGroup).getChildAt(0).let { scroll ->
-                ((scroll as ScrollView).getChildAt(0) as LinearLayout).getChildAt(1) as CardView
-            }
+    private fun showDeleteConfirmation() {
+        val trip = currentTrip ?: return
+
+        if (trip.isActive) {
+            AlertDialog.Builder(this)
+                .setTitle("Cannot Delete Active Trip")
+                .setMessage("You cannot delete a trip that is currently active. Please stop the trip first.")
+                .setPositiveButton("OK", null)
+                .setIcon(android.R.drawable.ic_dialog_info)
+                .show()
+            return
         }
 
-        val content = infoCard.getChildAt(0) as LinearLayout
+        AlertDialog.Builder(this)
+            .setTitle("Delete Trip")
+            .setMessage("Are you sure you want to delete \"${trip.destination}\"?\n\n" +
+                    "This will permanently delete:\n" +
+                    "• All GPS locations (${trip.totalDistance.toInt()} km tracked)\n" +
+                    "• All photos\n" +
+                    "• All notes\n\n" +
+                    "This action CANNOT be undone!")
+            .setPositiveButton("Delete") { _, _ ->
+                deleteTrip(trip)
+            }
+            .setNegativeButton("Cancel", null)
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show()
+    }
+
+    private fun deleteTrip(trip: Trip) {
+        viewModel.deleteTrip(trip.id)
+        Toast.makeText(
+            this,
+            "Trip \"${trip.destination}\" deleted successfully",
+            Toast.LENGTH_SHORT
+        ).show()
+        finish()
+    }
+
+    private fun updateTripInfo(trip: Trip) {
+        val content = infoCardContent ?: return
         content.removeAllViews()
 
         // Icon and destination
@@ -446,16 +540,10 @@ class TripDetailActivity : AppCompatActivity() {
     }
 
     private fun loadStatistics(tripId: Long) {
-        val statsCard = findViewById<CardView>(android.R.id.content).let { root ->
-            (root as ViewGroup).getChildAt(0).let { scroll ->
-                ((scroll as ScrollView).getChildAt(0) as LinearLayout).getChildAt(2) as CardView
-            }
-        }
-
-        val content = statsCard.getChildAt(0) as LinearLayout
+        val content = statsCardContent ?: return
 
         viewModel.getLocationsByTrip(tripId).observe(this) { locations ->
-            // Remove old stats if any
+            // Remove old stats (except title)
             while (content.childCount > 1) {
                 content.removeViewAt(1)
             }
@@ -473,16 +561,10 @@ class TripDetailActivity : AppCompatActivity() {
     }
 
     private fun loadPhotos(tripId: Long) {
-        val photosCard = findViewById<CardView>(android.R.id.content).let { root ->
-            (root as ViewGroup).getChildAt(0).let { scroll ->
-                ((scroll as ScrollView).getChildAt(0) as LinearLayout).getChildAt(4) as CardView
-            }
-        }
-
-        val content = photosCard.getChildAt(0) as LinearLayout
+        val content = photosCardContent ?: return
 
         viewModel.getPhotosByTrip(tripId).observe(this) { photos ->
-            // Remove old photos if any
+            // Remove old content (except header)
             while (content.childCount > 1) {
                 content.removeViewAt(1)
             }
@@ -518,16 +600,10 @@ class TripDetailActivity : AppCompatActivity() {
     }
 
     private fun loadNotes(tripId: Long) {
-        val notesCard = findViewById<CardView>(android.R.id.content).let { root ->
-            (root as ViewGroup).getChildAt(0).let { scroll ->
-                ((scroll as ScrollView).getChildAt(0) as LinearLayout).getChildAt(5) as CardView
-            }
-        }
-
-        val content = notesCard.getChildAt(0) as LinearLayout
+        val content = notesCardContent ?: return
 
         viewModel.getNotesByTrip(tripId).observe(this) { notes ->
-            // Remove old notes if any
+            // Remove old content (except title)
             while (content.childCount > 1) {
                 content.removeViewAt(1)
             }
@@ -642,5 +718,13 @@ class TripDetailActivity : AppCompatActivity() {
 
     private fun dpToPx(dp: Int): Int {
         return (dp * resources.displayMetrics.density).toInt()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        infoCardContent = null
+        statsCardContent = null
+        photosCardContent = null
+        notesCardContent = null
     }
 }
