@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
@@ -36,6 +37,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TravelCompanion"
         tools:targetApi="31">
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
 
         <!-- Main Activity -->
         <activity
@@ -68,6 +74,20 @@
             android:exported="false"
             android:parentActivityName=".MainActivity"
             android:label="Trip Details" />
+
+        <!-- Photo Gallery Activity -->
+        <activity
+            android:name=".ui.activity.PhotoGalleryActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.activity.TripDetailActivity"
+            android:label="Photo Gallery" />
+
+        <!-- Trip Map Activity -->
+        <activity
+            android:name=".ui.activity.TripMapActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.activity.TripDetailActivity"
+            android:label="Trip Route Map" />
 
         <!-- Location Tracking Service -->
         <service
