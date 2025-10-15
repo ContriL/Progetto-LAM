@@ -15,6 +15,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
+import com.example.travel_companion.service.ActivityRecognitionManager
+import com.example.travel_companion.util.NotificationHelper
 import com.example.travel_companion.util.PermissionHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -32,6 +34,12 @@ class MainActivity : AppCompatActivity() {
         private const val TAG_TRIPS = "TRIPS"
         private const val TAG_STATS = "STATS"
         private const val TAG_PROFILE = "PROFILE"
+
+        // Menu item IDs
+        private const val MENU_HOME = 1
+        private const val MENU_TRIPS = 2
+        private const val MENU_STATS = 3
+        private const val MENU_PROFILE = 4
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,6 +47,9 @@ class MainActivity : AppCompatActivity() {
 
         try {
             Log.d(TAG, "onCreate started")
+
+            // IMPORTANTE: Inizializza i canali di notifica prima di tutto
+            NotificationHelper.createNotificationChannels(this)
 
             // Crea il layout programmaticamente
             val rootLayout = createLayout()
@@ -57,7 +68,7 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Loading initial fragment")
                 loadFragment(HomeFragment(), TAG_HOME)
                 bottomNav?.post {
-                    bottomNav?.selectedItemId = 1
+                    bottomNav?.selectedItemId = MENU_HOME  // CORRETTO
                 }
             } else {
                 currentFragmentTag = savedInstanceState.getString("CURRENT_FRAGMENT", TAG_HOME)
@@ -134,10 +145,10 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Crea menu programmaticamente
-            menu.add(0, 1, 0, "Home").setIcon(android.R.drawable.ic_menu_compass)
-            menu.add(0, 2, 0, "Trips").setIcon(android.R.drawable.ic_menu_mapmode)
-            menu.add(0, 3, 0, "Stats").setIcon(android.R.drawable.ic_menu_sort_by_size)
-            menu.add(0, 4, 0, "Profile").setIcon(android.R.drawable.ic_menu_myplaces)
+            menu.add(0, MENU_HOME, 0, "Home").setIcon(android.R.drawable.ic_menu_compass)
+            menu.add(0, MENU_TRIPS, 0, "Trips").setIcon(android.R.drawable.ic_menu_mapmode)
+            menu.add(0, MENU_STATS, 0, "Stats").setIcon(android.R.drawable.ic_menu_sort_by_size)
+            menu.add(0, MENU_PROFILE, 0, "Profile").setIcon(android.R.drawable.ic_menu_myplaces)
         }
 
         // FAB
@@ -166,22 +177,22 @@ class MainActivity : AppCompatActivity() {
         bottomNav?.setOnItemSelectedListener { item ->
             try {
                 when (item.itemId) {
-                    1 -> {
+                    MENU_HOME -> {
                         loadFragment(HomeFragment(), TAG_HOME)
                         updateToolbarTitle("Home")
                         true
                     }
-                    2 -> {
+                    MENU_TRIPS -> {
                         loadFragment(TripsFragment(), TAG_TRIPS)
                         updateToolbarTitle("My Trips")
                         true
                     }
-                    3 -> {
+                    MENU_STATS -> {
                         loadFragment(StatsFragment(), TAG_STATS)
                         updateToolbarTitle("Statistics")
                         true
                     }
-                    4 -> {
+                    MENU_PROFILE -> {
                         loadFragment(ProfileFragment(), TAG_PROFILE)
                         updateToolbarTitle("Profile")
                         true
@@ -231,7 +242,8 @@ class MainActivity : AppCompatActivity() {
     private fun checkAndRequestPermissions() {
         if (!PermissionHelper.hasLocationPermission(this) ||
             !PermissionHelper.hasCameraPermission(this) ||
-            !PermissionHelper.hasNotificationPermission(this)) {
+            !PermissionHelper.hasNotificationPermission(this) ||
+            !PermissionHelper.hasActivityRecognitionPermission(this)) {
 
             if (PermissionHelper.shouldShowLocationRationale(this)) {
                 showPermissionRationale()
@@ -239,17 +251,20 @@ class MainActivity : AppCompatActivity() {
                 PermissionHelper.requestEssentialPermissions(this)
             }
         } else {
-            // Check for background location if foreground is granted
-            if (!PermissionHelper.hasBackgroundLocationPermission(this)) {
-                requestBackgroundLocationLater()
-            }
+            // Tutti i permessi essenziali sono concessi
+            initializeServicesWithPermissions()
         }
     }
 
     private fun showPermissionRationale() {
         AlertDialog.Builder(this)
             .setTitle("Permissions Required")
-            .setMessage("Travel Companion needs location and camera permissions to track your trips and capture memories. Background location is needed to track your journey even when the app is closed.")
+            .setMessage("Travel Companion needs the following permissions:\n\n" +
+                    "• Location: Track your trips\n" +
+                    "• Camera: Capture travel memories\n" +
+                    "• Notifications: Trip alerts and reminders\n" +
+                    "• Activity Recognition: Auto-detect when you're traveling\n\n" +
+                    "Background location is needed to track your journey even when the app is closed.")
             .setPositiveButton("Grant") { _, _ ->
                 PermissionHelper.requestEssentialPermissions(this)
             }
@@ -275,6 +290,32 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun requestActivityRecognitionLater() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            AlertDialog.Builder(this)
+                .setTitle("Activity Recognition")
+                .setMessage("Allow the app to recognize your activities (walking, driving, etc.) to suggest when to start tracking trips automatically.")
+                .setPositiveButton("Allow") { _, _ ->
+                    PermissionHelper.requestActivityRecognitionPermission(this)
+                }
+                .setNegativeButton("Later", null)
+                .show()
+        }
+    }
+
+    private fun initializeServicesWithPermissions() {
+        // Avvia Activity Recognition se il permesso è concesso
+        if (PermissionHelper.hasActivityRecognitionPermission(this)) {
+            ActivityRecognitionManager.startActivityRecognition(this)
+            Log.d(TAG, "Activity Recognition initialized")
+        }
+
+        // Richiedi background location se non ancora concesso
+        if (!PermissionHelper.hasBackgroundLocationPermission(this)) {
+            requestBackgroundLocationLater()
+        }
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -288,10 +329,9 @@ class MainActivity : AppCompatActivity() {
                     requestCode, permissions, grantResults,
                     onGranted = {
                         Toast.makeText(this, "Permissions granted!", Toast.LENGTH_SHORT).show()
-                        // Request background location after foreground is granted
-                        if (!PermissionHelper.hasBackgroundLocationPermission(this)) {
-                            requestBackgroundLocationLater()
-                        }
+
+                        // Inizializza servizi dopo aver ottenuto i permessi
+                        initializeServicesWithPermissions()
                     },
                     onDenied = {
                         Toast.makeText(
@@ -302,6 +342,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 )
             }
+
             PermissionHelper.BACKGROUND_LOCATION_PERMISSION_CODE -> {
                 if (PermissionHelper.hasBackgroundLocationPermission(this)) {
                     Toast.makeText(this, "Background tracking enabled!", Toast.LENGTH_SHORT).show()
@@ -309,6 +350,32 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(
                         this,
                         "Background tracking limited. App must be open to track trips.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
+            PermissionHelper.ACTIVITY_RECOGNITION_PERMISSION_CODE -> {
+                if (PermissionHelper.hasActivityRecognitionPermission(this)) {
+                    Toast.makeText(this, "Activity recognition enabled!", Toast.LENGTH_SHORT).show()
+                    // Avvia Activity Recognition
+                    ActivityRecognitionManager.startActivityRecognition(this)
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Activity recognition denied. Automatic trip detection disabled.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
+            PermissionHelper.NOTIFICATION_PERMISSION_CODE -> {
+                if (PermissionHelper.hasNotificationPermission(this)) {
+                    Toast.makeText(this, "Notification permission granted!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Notification permission denied. You won't receive trip alerts.",
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -338,7 +405,7 @@ class MainActivity : AppCompatActivity() {
         // Gestione back button: torna alla home se non ci sei già
         if (currentFragmentTag != TAG_HOME) {
             loadFragment(HomeFragment(), TAG_HOME)
-            bottomNav?.selectedItemId = 1
+            bottomNav?.selectedItemId = MENU_HOME  // CORRETTO
             updateToolbarTitle("Home")
         } else {
             super.onBackPressed()
@@ -347,6 +414,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        // Ferma Activity Recognition quando l'app viene chiusa
+        ActivityRecognitionManager.stopActivityRecognition(this)
+
         bottomNav = null
         fabStartTrip = null
         fragmentContainer = null

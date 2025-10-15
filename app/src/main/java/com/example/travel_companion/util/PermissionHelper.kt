@@ -14,6 +14,7 @@ object PermissionHelper {
     const val CAMERA_PERMISSION_CODE = 1002
     const val BACKGROUND_LOCATION_PERMISSION_CODE = 1003
     const val NOTIFICATION_PERMISSION_CODE = 1004
+    const val ACTIVITY_RECOGNITION_PERMISSION_CODE = 1005
 
     private val LOCATION_PERMISSIONS = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -32,6 +33,12 @@ object PermissionHelper {
 
     private val NOTIFICATION_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         arrayOf(Manifest.permission.POST_NOTIFICATIONS)
+    } else {
+        emptyArray()
+    }
+
+    private val ACTIVITY_RECOGNITION_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        arrayOf(Manifest.permission.ACTIVITY_RECOGNITION)
     } else {
         emptyArray()
     }
@@ -66,6 +73,15 @@ object PermissionHelper {
         return ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    // Check if activity recognition permission is granted
+    fun hasActivityRecognitionPermission(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACTIVITY_RECOGNITION
         ) == PackageManager.PERMISSION_GRANTED
     }
 
@@ -109,6 +125,17 @@ object PermissionHelper {
         }
     }
 
+    // Request activity recognition permission
+    fun requestActivityRecognitionPermission(activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ActivityCompat.requestPermissions(
+                activity,
+                ACTIVITY_RECOGNITION_PERMISSIONS,
+                ACTIVITY_RECOGNITION_PERMISSION_CODE
+            )
+        }
+    }
+
     // Request all essential permissions at once
     fun requestEssentialPermissions(activity: Activity) {
         val permissions = mutableListOf<String>()
@@ -123,6 +150,10 @@ object PermissionHelper {
 
         if (!hasNotificationPermission(activity)) {
             permissions.addAll(NOTIFICATION_PERMISSIONS)
+        }
+
+        if (!hasActivityRecognitionPermission(activity)) {
+            permissions.addAll(ACTIVITY_RECOGNITION_PERMISSIONS)
         }
 
         if (permissions.isNotEmpty()) {
@@ -146,6 +177,14 @@ object PermissionHelper {
         return ActivityCompat.shouldShowRequestPermissionRationale(
             activity,
             Manifest.permission.CAMERA
+        )
+    }
+
+    fun shouldShowActivityRecognitionRationale(activity: Activity): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        return ActivityCompat.shouldShowRequestPermissionRationale(
+            activity,
+            Manifest.permission.ACTIVITY_RECOGNITION
         )
     }
 
