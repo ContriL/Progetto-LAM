@@ -69,6 +69,22 @@ class PhotoGalleryActivity : AppCompatActivity() {
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
         }
 
+        // ✅ BACK BUTTON AGGIUNTO
+        val backButton = Button(this).apply {
+            text = "← Back"
+            textSize = 14f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(16)
+            }
+            setOnClickListener {
+                finish() // Torna a TripDetailActivity
+            }
+        }
+        mainLayout.addView(backButton)
+
         // Title
         val title = TextView(this).apply {
             text = "📷 Photo Gallery"

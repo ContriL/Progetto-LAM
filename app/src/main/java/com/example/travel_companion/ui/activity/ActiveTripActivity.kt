@@ -53,7 +53,6 @@ class ActiveTripActivity : AppCompatActivity() {
         private const val CAMERA_PERMISSION_CODE = 100
     }
 
-    // Camera launcher
     private val takePictureLauncher = registerForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
@@ -67,7 +66,6 @@ class ActiveTripActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Check Google Play Services
         if (!com.example.travel_companion.util.PlayServicesHelper.checkPlayServices(this)) {
             Toast.makeText(
                 this,
@@ -108,6 +106,23 @@ class ActiveTripActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
         }
+
+        // ✅ BACK BUTTON AGGIUNTO
+        val backButton = Button(this).apply {
+            text = "← Back"
+            textSize = 14f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(16)
+            }
+            setOnClickListener {
+                // Torna alla MainActivity senza fermare il trip
+                finish()
+            }
+        }
+        mainLayout.addView(backButton)
 
         // Header card
         mainLayout.addView(createHeaderCard())
@@ -346,7 +361,6 @@ class ActiveTripActivity : AppCompatActivity() {
         viewModel.getLocationsByTrip(tripId).observe(this) { locations ->
             txtLocationsValue?.text = "${locations.size}"
 
-            // Calculate distance
             if (locations.size >= 2) {
                 var distance = 0.0
                 for (i in 0 until locations.size - 1) {
@@ -427,7 +441,7 @@ class ActiveTripActivity : AppCompatActivity() {
                 longitude = currentLongitude
             )
             Toast.makeText(this, "Photo saved!", Toast.LENGTH_SHORT).show()
-            getCurrentLocation() // Refresh location for next photo
+            getCurrentLocation()
         }
     }
 
@@ -472,13 +486,11 @@ class ActiveTripActivity : AppCompatActivity() {
 
     private fun stopTrip() {
         currentTrip?.let { trip ->
-            // Stop location service
             val serviceIntent = Intent(this, LocationTrackingService::class.java).apply {
                 action = LocationTrackingService.ACTION_STOP_TRACKING
             }
             startService(serviceIntent)
 
-            // Update trip in database
             viewModel.stopTrip(trip.id)
 
             Toast.makeText(this, "Trip stopped successfully", Toast.LENGTH_SHORT).show()

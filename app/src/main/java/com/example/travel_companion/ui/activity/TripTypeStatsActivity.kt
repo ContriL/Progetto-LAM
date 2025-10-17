@@ -5,6 +5,7 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -51,6 +52,22 @@ class TripTypeStatsActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
         }
+
+        // ✅ BACK BUTTON AGGIUNTO
+        val backButton = Button(this).apply {
+            text = "← Back"
+            textSize = 14f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(16)
+            }
+            setOnClickListener {
+                finish() // Torna alla schermata precedente
+            }
+        }
+        mainLayout.addView(backButton)
 
         // Title
         val title = TextView(this).apply {
@@ -220,12 +237,10 @@ class TripTypeStatsActivity : AppCompatActivity() {
         TripType.values().forEach { type ->
             val views = statCards[type] ?: return@forEach
 
-            // Observe count
             viewModel.getTripCountByType(type).observe(this) { count ->
                 views.countText.text = count?.toString() ?: "0"
             }
 
-            // Observe total distance
             viewModel.getTotalDistanceByType(type).observe(this) { distance ->
                 val distStr = if (distance != null && distance > 0) {
                     String.format("%.1f km", distance)
@@ -235,7 +250,6 @@ class TripTypeStatsActivity : AppCompatActivity() {
                 views.distanceText.text = distStr
             }
 
-            // Observe average distance
             viewModel.getAverageDistanceByType(type).observe(this) { avgDistance ->
                 val avgStr = if (avgDistance != null && avgDistance > 0) {
                     String.format("%.1f km", avgDistance)
