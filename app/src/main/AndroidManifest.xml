@@ -94,6 +94,37 @@
             android:parentActivityName=".ui.activity.TripDetailActivity"
             android:label="Trip Route Map" />
 
+        <!-- Settings Activities -->
+        <activity
+            android:name=".ui.activity.NotificationsSettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:label="Notification Settings" />
+
+        <activity
+            android:name=".ui.activity.LocationSettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:label="Location Settings" />
+
+        <activity
+            android:name=".ui.activity.LanguageSettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:label="Language" />
+
+        <activity
+            android:name=".ui.activity.ThemeSettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:label="Theme" />
+
+        <activity
+            android:name=".ui.activity.PrivacySettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:label="Privacy &amp; Security" />
+
         <!-- Location Tracking Service -->
         <service
             android:name=".service.LocationTrackingService"

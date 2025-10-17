@@ -1,5 +1,6 @@
 package com.example.travel_companion
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -12,8 +13,16 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import com.example.travel_companion.ui.activity.*
+import com.example.travel_companion.viewmodel.TripViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ProfileFragment : Fragment() {
+
+    private val viewModel: TripViewModel by activityViewModels()
+    private val dateFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -21,6 +30,7 @@ class ProfileFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         val view = createLayout()
+        observeData()
         return view
     }
 
@@ -175,15 +185,13 @@ class ProfileFragment : Fragment() {
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
         }
 
-        val infoItems = listOf(
-            Pair("Member since", "October 2025"),
-            Pair("Total trips", "0 trips"),
-            Pair("Favorite destination", "Not set")
-        )
+        val memberSinceRow = createInfoRow("Member since", dateFormat.format(Date()))
+        val totalTripsRow = createInfoRow("Total trips", "Loading...")
+        val favDestRow = createInfoRow("Favorite destination", "Not set")
 
-        infoItems.forEach { (label, value) ->
-            content.addView(createInfoRow(label, value))
-        }
+        content.addView(memberSinceRow)
+        content.addView(totalTripsRow)
+        content.addView(favDestRow)
 
         card.addView(content)
         return card
@@ -203,25 +211,22 @@ class ProfileFragment : Fragment() {
         }
 
         val labelText = TextView(context).apply {
+            text = label
+            textSize = 14f
+            setTextColor(Color.GRAY)
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 1f
             )
-            text = label
-            textSize = 14f
-            setTextColor(Color.GRAY)
         }
 
         val valueText = TextView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
             text = value
             textSize = 14f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.BLACK)
+            tag = label // Per recuperarlo dopo
         }
 
         row.addView(labelText)
@@ -242,21 +247,21 @@ class ProfileFragment : Fragment() {
         }
 
         val settings = listOf(
-            Pair("🔔", "Notifications"),
-            Pair("📍", "Location Tracking"),
-            Pair("🌐", "Language"),
-            Pair("🎨", "Theme"),
-            Pair("🔒", "Privacy")
+            Triple("🔔", "Notifications", NotificationsSettingsActivity::class.java),
+            Triple("📍", "Location Settings", LocationSettingsActivity::class.java),
+            Triple("🌐", "Language", LanguageSettingsActivity::class.java),
+            Triple("🎨", "Theme", ThemeSettingsActivity::class.java),
+            Triple("🔒", "Privacy & Security", PrivacySettingsActivity::class.java)
         )
 
-        settings.forEach { (icon, title) ->
-            container.addView(createSettingItem(icon, title))
+        settings.forEach { (icon, title, activityClass) ->
+            container.addView(createSettingItem(icon, title, activityClass))
         }
 
         return container
     }
 
-    private fun createSettingItem(icon: String, title: String): CardView {
+    private fun createSettingItem(icon: String, title: String, activityClass: Class<*>): CardView {
         val context = requireContext()
 
         val card = CardView(context).apply {
@@ -268,6 +273,8 @@ class ProfileFragment : Fragment() {
             }
             radius = dpToPx(8).toFloat()
             cardElevation = dpToPx(2).toFloat()
+            isClickable = true
+            isFocusable = true
         }
 
         val content = LinearLayout(context).apply {
@@ -309,7 +316,10 @@ class ProfileFragment : Fragment() {
         content.addView(arrow)
         card.addView(content)
 
-        // TODO: Aggiungere onClick listener
+        card.setOnClickListener {
+            val intent = Intent(requireContext(), activityClass)
+            startActivity(intent)
+        }
 
         return card
     }
@@ -372,6 +382,12 @@ class ProfileFragment : Fragment() {
         card.addView(content)
 
         return card
+    }
+
+    private fun observeData() {
+        viewModel.tripCount.observe(viewLifecycleOwner) { count ->
+            view?.findViewWithTag<TextView>("Total trips")?.text = "$count trips"
+        }
     }
 
     private fun dpToPx(dp: Int): Int {
